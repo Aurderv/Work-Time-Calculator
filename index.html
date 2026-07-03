@@ -1,0 +1,596 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Work Time Calculator</title>
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#14182B">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Work Time">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<link rel="icon" href="icon-192.png" type="image/png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600&family=IBM+Plex+Mono:wght@500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --ink: #14182B;
+    --ink-soft: #4B5069;
+    --paper: #F3F4F8;
+    --card: #FFFFFF;
+    --amber: #E8A23D;
+    --amber-deep: #C9821F;
+    --teal: #2F6F6B;
+    --line: #E4E5EC;
+    --radius: 20px;
+  }
+
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+
+  html, body {
+    margin: 0;
+    min-height: 100vh;
+  }
+
+  body {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 24px 16px;
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+    background:
+      radial-gradient(circle at 15% 8%, rgba(232,162,61,0.10), transparent 45%),
+      radial-gradient(circle at 90% 90%, rgba(47,111,107,0.08), transparent 50%),
+      var(--paper);
+    color: var(--ink);
+  }
+
+  .app {
+    width: 100%;
+    max-width: 380px;
+  }
+
+  .masthead {
+    margin-bottom: 14px;
+    padding: 0 4px;
+  }
+
+  .masthead h1 {
+    font-family: 'Space Grotesk', sans-serif;
+    font-size: 20px;
+    font-weight: 700;
+    letter-spacing: -0.01em;
+    margin: 0;
+  }
+
+  .card {
+    background: var(--card);
+    border-radius: var(--radius);
+    padding: 22px 22px 24px;
+    box-shadow:
+      0 1px 2px rgba(20,24,43,0.04),
+      0 12px 32px rgba(20,24,43,0.08);
+    border: 1px solid var(--line);
+  }
+
+  /* Segmented tab control */
+  .tabs {
+    display: flex;
+    background: var(--paper);
+    border-radius: 12px;
+    padding: 4px;
+    margin-bottom: 22px;
+    position: relative;
+  }
+
+  .tab {
+    flex: 1;
+    z-index: 1;
+    text-align: center;
+    padding: 9px 4px;
+    font-family: 'Inter', sans-serif;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--ink-soft);
+    border-radius: 9px;
+    cursor: pointer;
+    user-select: none;
+    transition: color 0.2s ease;
+  }
+
+  .tab.active { color: var(--ink); }
+
+  .tab-highlight {
+    position: absolute;
+    top: 4px;
+    bottom: 4px;
+    left: 4px;
+    width: calc(50% - 4px);
+    background: var(--card);
+    border-radius: 9px;
+    box-shadow: 0 1px 2px rgba(20,24,43,0.06), 0 2px 8px rgba(20,24,43,0.06);
+    transition: transform 0.25s cubic-bezier(.4,0,.2,1);
+  }
+
+  .tab-highlight.pos-1 { transform: translateX(100%); }
+
+  .panel-stack {
+    display: grid;
+  }
+
+  .panel {
+    grid-column: 1;
+    grid-row: 1;
+    visibility: hidden;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.18s ease;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .panel.active {
+    visibility: visible;
+    opacity: 1;
+    pointer-events: auto;
+  }
+
+  label {
+    display: block;
+    font-size: 11.5px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    margin-bottom: 7px;
+    color: var(--ink-soft);
+    white-space: nowrap;
+  }
+
+  input[type="time"],
+  input[type="number"] {
+    width: 100%;
+    height: 46px;
+    padding: 0 13px;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 16px;
+    font-weight: 500;
+    color: var(--ink);
+    border: 1.5px solid var(--line);
+    border-radius: 11px;
+    background: var(--paper);
+    transition: border-color 0.15s ease, background 0.15s ease;
+  }
+
+  input:focus {
+    outline: none;
+    border-color: var(--amber-deep);
+    background: var(--card);
+  }
+
+  .fields { display: block; }
+  .field { margin-bottom: 16px; }
+
+  .row {
+    display: flex;
+    gap: 10px;
+  }
+  .row .field { flex: 1; }
+
+  /* Result */
+  .result {
+    margin-top: 20px;
+    background: var(--ink);
+    border-radius: 16px;
+    padding: 22px 20px;
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .result::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: radial-gradient(circle at 85% -10%, rgba(232,162,61,0.35), transparent 55%);
+    pointer-events: none;
+  }
+
+  .dial {
+    flex-shrink: 0;
+    width: 84px;
+    height: 84px;
+    position: relative;
+  }
+
+  .dial svg { display: block; overflow: visible; }
+
+  .dial-labels {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 1px;
+    pointer-events: none;
+    font-family: 'IBM Plex Mono', monospace;
+    font-weight: 600;
+  }
+
+  .dial-labels span {
+    font-size: 9.5px;
+    line-height: 1;
+    letter-spacing: 0.01em;
+  }
+
+  .dl-amber { color: var(--amber); }
+  .dl-blue { color: #4C8CF2; }
+
+  .dial-track {
+    fill: none;
+    stroke: rgba(255,255,255,0.14);
+    stroke-width: 6;
+  }
+
+  .dial-track-outer {
+    fill: none;
+    stroke: rgba(255,255,255,0.08);
+    stroke-width: 6;
+    opacity: 0;
+    transition: opacity 0.25s ease;
+  }
+
+  .dial-track-outer.visible { opacity: 1; }
+
+  .dial-progress {
+    fill: none;
+    stroke: var(--amber);
+    stroke-width: 6;
+    stroke-linecap: round;
+    transform: rotate(-90deg);
+    transform-origin: 50% 50%;
+    transition: stroke-dashoffset 0.3s ease;
+  }
+
+  .dial-progress-overflow {
+    fill: none;
+    stroke: #4C8CF2;
+    stroke-width: 6;
+    stroke-linecap: round;
+    transform: rotate(-90deg);
+    transform-origin: 50% 50%;
+    transition: stroke-dashoffset 0.3s ease;
+  }
+
+  .result-text { position: relative; z-index: 1; }
+
+  .result .eyebrow {
+    font-size: 10.5px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: rgba(255,255,255,0.55);
+    margin-bottom: 4px;
+  }
+
+  .result .time {
+    font-family: 'Space Grotesk', sans-serif;
+    font-size: 27px;
+    font-weight: 700;
+    color: #fff;
+    line-height: 1.1;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .result .detail {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 11px;
+    color: rgba(255,255,255,0.5);
+    margin-top: 5px;
+  }
+
+  .legend {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    margin-top: 18px;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 11px;
+    font-weight: 600;
+  }
+
+  .legend-amber { color: var(--amber-deep); }
+  .legend-blue { color: #3374E0; }
+  .legend-sep { color: var(--line); }
+
+
+</style>
+</head>
+<body>
+  <div class="app">
+    <div class="masthead">
+      <h1>Work Time Calculator</h1>
+    </div>
+
+    <div class="card">
+      <div class="tabs">
+        <div class="tab-highlight pos-0" id="tabHighlight"></div>
+        <div class="tab active" data-tab="endtime">Find End Time</div>
+        <div class="tab" data-tab="hours">Find Hours Worked</div>
+      </div>
+
+      <div class="panel-stack">
+
+      <!-- Panel 1: given start, find end time -->
+      <div class="panel active" id="panel-endtime">
+        <div class="fields" id="fields1">
+        <div class="field">
+          <label for="start">Start Time</label>
+          <input type="time" id="start" value="09:00">
+        </div>
+
+        <div class="row">
+          <div class="field">
+            <label for="work">Work Hours</label>
+            <input type="number" id="work" value="7.25" step="0.25" min="0">
+          </div>
+          <div class="field">
+            <label for="brk">Break Minutes</label>
+            <input type="number" id="brk" value="30" step="5" min="0">
+          </div>
+        </div>
+        </div>
+
+        <div class="result">
+          <div class="dial">
+            <svg viewBox="0 0 100 100" width="84" height="84">
+              <circle class="dial-track" cx="50" cy="50" r="32"></circle>
+              <circle class="dial-track-outer" id="dial1TrackOuter" cx="50" cy="50" r="42"></circle>
+              <circle class="dial-progress" id="dial1" cx="50" cy="50" r="32"
+                stroke-dasharray="201.1 201.1" stroke-dashoffset="201.1"></circle>
+              <circle class="dial-progress-overflow" id="dial1Overflow" cx="50" cy="50" r="42"
+                stroke-dasharray="263.9 263.9" stroke-dashoffset="263.9"></circle>
+            </svg>
+            <div class="dial-labels">
+              <span class="dl-amber" id="dial1AmberLabel">7.25H</span>
+              <span class="dl-blue" id="dial1BlueLabel">0H</span>
+            </div>
+          </div>
+          <div class="result-text">
+            <div class="eyebrow">Finish At</div>
+            <div class="time" id="endTime">—</div>
+            <div class="detail" id="detail">—</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Panel 2: given start + end, find hours worked -->
+      <div class="panel" id="panel-hours">
+        <div class="fields" id="fields2">
+        <div class="row">
+          <div class="field">
+            <label for="start2">Start Time</label>
+            <input type="time" id="start2" value="09:00">
+          </div>
+          <div class="field">
+            <label for="end2">End Time</label>
+            <input type="time" id="end2" value="17:15">
+          </div>
+        </div>
+
+        <div class="field">
+          <label for="brk2">Break Minutes</label>
+          <input type="number" id="brk2" value="30" step="5" min="0">
+        </div>
+        </div>
+
+        <div class="result">
+          <div class="dial">
+            <svg viewBox="0 0 100 100" width="84" height="84">
+              <circle class="dial-track" cx="50" cy="50" r="32"></circle>
+              <circle class="dial-track-outer" id="dial2TrackOuter" cx="50" cy="50" r="42"></circle>
+              <circle class="dial-progress" id="dial2" cx="50" cy="50" r="32"
+                stroke-dasharray="201.1 201.1" stroke-dashoffset="201.1"></circle>
+              <circle class="dial-progress-overflow" id="dial2Overflow" cx="50" cy="50" r="42"
+                stroke-dasharray="263.9 263.9" stroke-dashoffset="263.9"></circle>
+            </svg>
+            <div class="dial-labels">
+              <span class="dl-amber" id="dial2AmberLabel">7.25H</span>
+              <span class="dl-blue" id="dial2BlueLabel">0H</span>
+            </div>
+          </div>
+          <div class="result-text">
+            <div class="eyebrow">Hours Worked</div>
+            <div class="time" id="hoursWorked">—</div>
+            <div class="detail" id="detail2">—</div>
+          </div>
+        </div>
+      </div>
+      </div>
+
+      <div class="legend">
+        <span class="legend-amber">Regular Hours</span>
+        <span class="legend-sep">·</span>
+        <span class="legend-blue">Accrued Flex</span>
+      </div>
+    </div>
+
+  </div>
+
+  <script>
+    const TARGET_HOURS = 7.25;
+    const OVERFLOW_RANGE = 10; // blue ring covers 10 additional hours beyond the target
+    const INNER_R = 32;
+    const OUTER_R = 42;
+    const CX = 50, CY = 50;
+    const INNER_CIRC = 2 * Math.PI * INNER_R; // ≈201.1
+    const OUTER_CIRC = 2 * Math.PI * OUTER_R; // ≈263.9
+
+    function setRing(el, circumference, fraction) {
+      const clamped = Math.max(0, Math.min(1, fraction));
+      const offset = circumference * (1 - clamped);
+      el.setAttribute('stroke-dashoffset', offset.toFixed(1));
+    }
+
+    // Drives the base ring (fills 0→1 up to the 7.25h target) and the
+    // overflow ring (only appears once hours exceed the target, filling
+    // its own lap in blue across a separate +10h scale). Also writes the
+    // live hour values into the dial's center labels.
+    function updateDial(innerEl, outerEl, outerTrackEl, amberLabelEl, blueLabelEl, hours) {
+      const baseHours = Math.min(hours, TARGET_HOURS);
+      const overflowHours = Math.max(hours - TARGET_HOURS, 0);
+
+      const baseFraction = baseHours / TARGET_HOURS;
+      const overflowFraction = overflowHours / OVERFLOW_RANGE;
+
+      setRing(innerEl, INNER_CIRC, baseFraction);
+      setRing(outerEl, OUTER_CIRC, overflowFraction);
+      outerTrackEl.classList.toggle('visible', overflowHours > 0);
+
+      amberLabelEl.textContent = formatDuration(baseHours);
+      blueLabelEl.textContent = overflowHours > 0 ? `+${formatDuration(overflowHours)}` : '0H';
+    }
+
+    function formatClock(totalMinutes) {
+      totalMinutes = ((totalMinutes % 1440) + 1440) % 1440;
+      let h = Math.floor(totalMinutes / 60);
+      const m = Math.round(totalMinutes % 60);
+      const ampm = h >= 12 ? 'PM' : 'AM';
+      let h12 = h % 12;
+      if (h12 === 0) h12 = 12;
+      const mm = m.toString().padStart(2, '0');
+      return `${h12}:${mm} ${ampm}`;
+    }
+
+    function formatDuration(hrs) {
+      const h = Math.floor(hrs);
+      const m = Math.round((hrs - h) * 60);
+      if (m === 0) return `${h}H`;
+      return `${h}H ${m}M`;
+    }
+
+    // --- Panel 1: end time from start ---
+    const startEl = document.getElementById('start');
+    const workEl = document.getElementById('work');
+    const brkEl = document.getElementById('brk');
+    const endTimeEl = document.getElementById('endTime');
+    const detailEl = document.getElementById('detail');
+    const dial1 = document.getElementById('dial1');
+    const dial1Overflow = document.getElementById('dial1Overflow');
+    const dial1TrackOuter = document.getElementById('dial1TrackOuter');
+    const dial1AmberLabel = document.getElementById('dial1AmberLabel');
+    const dial1BlueLabel = document.getElementById('dial1BlueLabel');
+
+    function calculate() {
+      const [sh, sm] = startEl.value.split(':').map(Number);
+      const work = parseFloat(workEl.value) || 0;
+      const brkMinutes = parseFloat(brkEl.value) || 0;
+      if (isNaN(sh) || isNaN(sm)) {
+        endTimeEl.textContent = '—';
+        detailEl.textContent = '—';
+        return;
+      }
+      const startMinutes = sh * 60 + sm;
+      const totalMinutes = work * 60 + brkMinutes;
+      const endMinutes = startMinutes + totalMinutes;
+
+      endTimeEl.textContent = formatClock(endMinutes);
+      detailEl.textContent = `${formatDuration(work)} Work + ${brkMinutes}M Break`;
+      updateDial(dial1, dial1Overflow, dial1TrackOuter, dial1AmberLabel, dial1BlueLabel, work);
+    }
+
+    [startEl, workEl, brkEl].forEach(el => el.addEventListener('input', calculate));
+    calculate();
+
+    // --- Panel 2: hours worked from start + end ---
+    const start2El = document.getElementById('start2');
+    const end2El = document.getElementById('end2');
+    const brk2El = document.getElementById('brk2');
+    const hoursWorkedEl = document.getElementById('hoursWorked');
+    const detail2El = document.getElementById('detail2');
+    const dial2 = document.getElementById('dial2');
+    const dial2Overflow = document.getElementById('dial2Overflow');
+    const dial2TrackOuter = document.getElementById('dial2TrackOuter');
+    const dial2AmberLabel = document.getElementById('dial2AmberLabel');
+    const dial2BlueLabel = document.getElementById('dial2BlueLabel');
+
+    function calculateHours() {
+      const [sh, sm] = start2El.value.split(':').map(Number);
+      const [eh, em] = end2El.value.split(':').map(Number);
+      const brkMinutes = parseFloat(brk2El.value) || 0;
+      if (isNaN(sh) || isNaN(sm) || isNaN(eh) || isNaN(em)) {
+        hoursWorkedEl.textContent = '—';
+        detail2El.textContent = '—';
+        return;
+      }
+      let startMinutes = sh * 60 + sm;
+      let endMinutes = eh * 60 + em;
+      let diff = endMinutes - startMinutes;
+      if (diff < 0) diff += 1440; // overnight shift
+
+      const totalHrs = diff / 60;
+      const workedHrs = totalHrs - (brkMinutes / 60);
+
+      hoursWorkedEl.textContent = formatDuration(workedHrs);
+      detail2El.textContent = `${formatDuration(totalHrs)} Elapsed − ${brkMinutes}M Break`;
+      updateDial(dial2, dial2Overflow, dial2TrackOuter, dial2AmberLabel, dial2BlueLabel, workedHrs);
+    }
+
+    [start2El, end2El, brk2El].forEach(el => el.addEventListener('input', calculateHours));
+    calculateHours();
+
+    // --- Tab switching ---
+    const tabs = document.querySelectorAll('.tab');
+    const highlight = document.getElementById('tabHighlight');
+    const panels = {
+      endtime: document.getElementById('panel-endtime'),
+      hours: document.getElementById('panel-hours')
+    };
+    tabs.forEach((tab, i) => {
+      tab.addEventListener('click', () => {
+        tabs.forEach(t => t.classList.remove('active'));
+        tab.classList.add('active');
+        highlight.classList.toggle('pos-1', i === 1);
+        Object.values(panels).forEach(p => p.classList.remove('active'));
+        panels[tab.dataset.tab].classList.add('active');
+      });
+    });
+
+    // --- Equalize field-area height across both tabs ---
+    // Whatever the natural height of each tab's inputs turns out to be
+    // (fonts, form-control rendering, etc. can all shift it slightly),
+    // force both to match so the result block always sits at the same
+    // vertical offset regardless of which tab is active.
+    const fields1 = document.getElementById('fields1');
+    const fields2 = document.getElementById('fields2');
+
+    function equalizeFieldHeights() {
+      fields1.style.minHeight = '';
+      fields2.style.minHeight = '';
+      const tallest = Math.max(fields1.offsetHeight, fields2.offsetHeight);
+      fields1.style.minHeight = tallest + 'px';
+      fields2.style.minHeight = tallest + 'px';
+    }
+
+    equalizeFieldHeights();
+    window.addEventListener('resize', equalizeFieldHeights);
+    if (document.fonts && document.fonts.ready) {
+      document.fonts.ready.then(equalizeFieldHeights);
+    }
+
+    // --- PWA: register service worker for offline / installability ---
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('service-worker.js').catch(() => {
+          // Silently ignore — e.g. running from file:// or without HTTPS
+        });
+      });
+    }
+  </script>
+</body>
+</html>
